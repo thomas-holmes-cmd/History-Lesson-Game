@@ -125,3 +125,7 @@ Thumbs.db
 *.unitypackage
 
 *.log
+# Unity / tooling extras
+.plastic/
+.vsconfig
+ignore.conf
