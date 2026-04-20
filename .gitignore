@@ -97,35 +97,3 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
-Library/
-Temp/
-Obj/
-Build/
-Builds/
-UserSettings/
-Logs/
-MemoryCaptures/
-
-.vs/
-.vscode/
-.idea/
-
-*.csproj
-*.sln
-*.user
-*.pidb
-*.pdb
-*.mdb
-
-.DS_Store
-Thumbs.db
-
-*.apk
-*.aab
-*.unitypackage
-
-*.log
-# Unity / tooling extras
-.plastic/
-.vsconfig
-ignore.conf
