@@ -1,11 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using UnityEngine.SceneManagement;
 
 public class CharacterSelectionUI : MonoBehaviour
 {
-
     public GameObject optionPrefab;
     public Transform container;
     public StartButtonHandler startButtonHandler;
@@ -15,12 +13,14 @@ public class CharacterSelectionUI : MonoBehaviour
     private Transform p1;
     private Transform p2;
 
+    private Character p1Char;
+    private Character p2Char;
+
     private Vector3 normalScale = Vector3.one;
     private Vector3 selectedScale = new Vector3(1.2f, 1.2f, 1.2f);
 
     private void Start()
     {
-
         if (GameManager.instance == null || GameManager.instance.characters == null)
             return;
 
@@ -32,7 +32,6 @@ public class CharacterSelectionUI : MonoBehaviour
 
         foreach (Character c in GameManager.instance.characters)
         {
-
             GameObject obj = Instantiate(optionPrefab, container);
 
             Button btn = obj.GetComponent<Button>();
@@ -43,12 +42,6 @@ public class CharacterSelectionUI : MonoBehaviour
             Image icon = obj.transform.Find("Icon").GetComponent<Image>();
             if (icon != null) icon.sprite = c.icon;
 
-
-            Transform iconTransform = obj.transform.Find("Icon");
-            Outline outline = iconTransform.GetComponent<Outline>();
-            if (outline != null)
-                outline.enabled = false;
-
             allOptions[i] = obj.transform;
             i++;
 
@@ -56,24 +49,8 @@ public class CharacterSelectionUI : MonoBehaviour
         }
     }
 
-
     private void HandleClick(Character character, Transform option)
     {
-
-        // Check if clicking on already selected P1 option
-        if (p1 == option)
-        {
-            ClearP1();
-            return;
-        }
-
-        // Check if clicking on already selected P2 option
-        if (p2 == option)
-        {
-            ClearP2();
-            return;
-        }
-
         if (p1 == null)
         {
             SetP1(character, option);
@@ -87,101 +64,80 @@ public class CharacterSelectionUI : MonoBehaviour
         }
     }
 
-
     void SetP1(Character c, Transform option)
     {
+        p1 = option;
+        p1Char = c;
 
         GameManager.instance.SetCharacter(1, c);
 
-        p1 = option;
-
-        SetOutline(option, Color.blue);
-
+        UpdateVisuals();
         UpdateStart();
     }
-
-    void ClearP1()
-    {
-
-        if (p1 != null)
-            SetOutline(p1, false);
-
-        GameManager.instance.SetCharacter(1, null);
-        p1 = null;
-
-        UpdateStart();
-    }
-
 
     void SetP2(Character c, Transform option)
     {
+        p2 = option;
+        p2Char = c;
 
         GameManager.instance.SetCharacter(2, c);
 
-        p2 = option;
-
-        SetOutline(option, new Color(1f, 0.5f, 0f));
-
+        UpdateVisuals();
         UpdateStart();
     }
 
-    void ClearP2()
+    void UpdateVisuals()
     {
+        foreach (Transform option in allOptions)
+        {
+            if (option == null) continue;
 
-        if (p2 != null)
-            SetOutline(p2, false);
+            Transform icon = option.Find("Icon");
+            Outline outline = icon.GetComponent<Outline>();
 
-        GameManager.instance.SetCharacter(2, null);
-        p2 = null;
+            if (outline == null) continue;
 
-        UpdateStart();
+            bool isP1 = option == p1;
+            bool isP2 = option == p2;
+
+            if (!isP1 && !isP2)
+            {
+                outline.enabled = false;
+            }
+            else
+            {
+                outline.enabled = true;
+
+                if (isP1 && isP2)
+                {
+                    outline.effectColor = Color.magenta;
+                }
+                else if (isP1)
+                {
+                    outline.effectColor = Color.blue;
+                }
+                else if (isP2)
+                {
+                    outline.effectColor = new Color(1f, 0.5f, 0f);
+                }
+            }
+        }
     }
-
-
-    void SetOutline(Transform option, Color color)
-    {
-
-        Transform icon = option.Find("Icon");
-        if (icon == null) return;
-
-        Outline o = icon.GetComponent<Outline>();
-        if (o == null) return;
-
-        o.enabled = true;
-        o.effectColor = color;
-        o.effectDistance = new Vector2(4f, -4f);
-    }
-
-    void SetOutline(Transform option, bool state)
-    {
-
-        Transform icon = option.Find("Icon");
-        if (icon == null) return;
-
-        Outline o = icon.GetComponent<Outline>();
-        if (o != null)
-            o.enabled = state;
-    }
-
 
     private void Update()
     {
-
         if (allOptions == null) return;
 
-        for (int i = 0; i < allOptions.Length; i++)
+        foreach (Transform option in allOptions)
         {
+            if (option == null) continue;
 
-            if (allOptions[i] == null) continue;
-
-            bool selected =
-                allOptions[i] == p1 ||
-                allOptions[i] == p2;
+            bool selected = option == p1 || option == p2;
 
             Vector3 target = selected ? selectedScale : normalScale;
 
-            allOptions[i].localScale = Vector3.Lerp(
-                allOptions[i].localScale,
+            option.localScale = Vector3.Lerp(
+                option.localScale,
                 target,
                 Time.deltaTime * 10f
             );
@@ -190,10 +146,7 @@ public class CharacterSelectionUI : MonoBehaviour
 
     void UpdateStart()
     {
-
         bool bothSelected = GameManager.instance.BothPlayersSelected();
         startButtonHandler.SetInteractable(bothSelected);
-
-        
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Player : MonoBehaviour
@@ -53,10 +54,22 @@ public class Player : MonoBehaviour
     public float attackDuration = 1f;
     private float attackTimer;
     private bool isAttacking;
+    private HashSet<Player> hitPlayersThisAttack;
+    public int attackDamage = 10;
+    public float baseKnockbackStrength = 8f;
+    public float knockbackMultiplier = 2f;
 
     public float hitstunDuration = 0.3f;
     private float hitstunTimer;
     private bool isInHitstun;
+
+    [Header("Gun")]
+    public Projectile projectileprefab;
+    public Transform LaunchOffset;
+    private Vector2 direction;
+    [SerializeField] private float projectilemovespeed;
+    private float gunCooldownTimer = 0f;
+    public float gunCooldownTime = 10f;
 
     [Header("References")]
     public Transform respawnPoint;
@@ -64,17 +77,23 @@ public class Player : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Rigidbody2D rb;
     private AudioSource audioSource;
+    private Collider2D playerCollider;
 
     [Header("Sprites")]
     public Sprite normalSprite;
     public Sprite attackSprite;
     public Sprite attackSprite2;
+    public Sprite gunSprite;
 
     [Header("Audio")]
     public AudioClip jumpClip;
     public AudioClip winClip;
+    public AudioClip punchClip;
+    public AudioClip hurtClip;
+    public AudioClip gunShot;
 
     private bool hasLost = false;
+
     void Start()
     {
         Application.targetFrameRate = 60;
@@ -83,6 +102,9 @@ public class Player : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         audioSource = GetComponent<AudioSource>();
+        playerCollider = GetComponent<Collider2D>();
+
+        hitPlayersThisAttack = new HashSet<Player>();
 
         extraJumps = extraJumpsValue;
 
@@ -91,10 +113,9 @@ public class Player : MonoBehaviour
             healthBar = FindFirstObjectByType<HealthBar>();
         }
 
-        // Initialize health bar correctly
         if (healthBar != null)
         {
-            healthBar.SetHealth(damagePercent);  // Show current damage %
+            healthBar.SetHealth(damagePercent);
         }
 
         if (normalSprite != null)
@@ -107,6 +128,7 @@ public class Player : MonoBehaviour
 
         HandleTimers();
         HandlePlatformDrop();
+        HandleGunShot();
 
         if (!isAttacking && !isInHitstun)
         {
@@ -121,7 +143,13 @@ public class Player : MonoBehaviour
         SetGravity();
         SetAnimation(moveInput);
 
-        if (transform.position.y < -12)
+        if (transform.position.y < -9.5)
+            Die();
+        else if (transform.position.y > 8)
+            Die();
+        else if (transform.position.x > 15)
+            Die();
+        else if (transform.position.x < -15)
             Die();
     }
 
@@ -141,8 +169,6 @@ public class Player : MonoBehaviour
             groundLayer
         );
     }
-
-    // ---------------- INPUT ----------------
 
     float GetHorizontal()
     {
@@ -179,13 +205,24 @@ public class Player : MonoBehaviour
             ? Input.GetKey(KeyCode.S)
             : Input.GetKey(KeyCode.DownArrow);
     }
-
-    // ---------------- MOVEMENT ----------------
+    bool GunShot()
+    {
+        return playerIndex == 1
+            ? Input.GetKeyDown(KeyCode.H)
+            : Input.GetKeyDown(KeyCode.Space);
+    }
 
     void HandleJump()
     {
         if (isGrounded || isPlatform)
+        {
             extraJumps = extraJumpsValue;
+            coyoteTimeCounter = coyoteTime;
+        }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+        }
 
         if (JumpPressed() && !isAttacking && !isInHitstun)
         {
@@ -217,10 +254,11 @@ public class Player : MonoBehaviour
 
     void HandleWallSlide()
     {
-        if (isTouchingWall && !isGrounded && rb.linearVelocity.y < 0 && GetHorizontal() != 0)
+        if (isTouchingWall && !isGrounded && rb.linearVelocityY < 0.15f && wallJumpCooldown <= 0f)
         {
             isWallSliding = true;
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed);
+            extraJumps = extraJumpsValue;
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, -wallSlideSpeed));
         }
         else
         {
@@ -239,13 +277,13 @@ public class Player : MonoBehaviour
         rb.gravityScale = rb.linearVelocity.y < 0 ? 4f : 3f;
     }
 
-    // ---------------- ATTACK ----------------
-
     void StartAttack()
     {
         isAttacking = true;
         attackTimer = attackDuration;
+        hitPlayersThisAttack.Clear();
         animator.enabled = false;
+        PlaySFX(punchClip);
 
         if (attackSprite != null)
             spriteRenderer.sprite = attackSprite;
@@ -281,34 +319,57 @@ public class Player : MonoBehaviour
         }
     }
 
-    // UPDATED: TakeDamage method using damagePercent
+    void HandleGunShot()
+    {
+        if (gunCooldownTimer > 0f)
+        {
+            Debug.Log($"Gun on cooldown! {gunCooldownTimer:F1} seconds remaining");
+            return;
+        }
+
+        if (GunShot() && !isAttacking && !isInHitstun)
+        {
+            Vector2 shootDirection = spriteRenderer.flipX ? Vector2.left : Vector2.right;
+            Projectile projectile = Instantiate(projectileprefab, LaunchOffset.position, Quaternion.identity);
+            projectile.InitializeProjectile(shootDirection, projectilemovespeed, this);
+            PlaySFX(gunShot);
+
+            gunCooldownTimer = gunCooldownTime;
+        }
+    }
+
     public void TakeDamage(int damage, Vector2 knockbackDirection, float baseKnockbackStrength)
     {
-        // Increase damage percentage
         damagePercent += damage;
         damagePercent = Mathf.Clamp(damagePercent, 0, maxDamagePercent);
 
-        // Update health bar
         if (healthBar != null)
         {
             healthBar.SetHealth(damagePercent);
         }
 
-        // Calculate knockback based on damage percentage
-        float knockbackMultiplier = 1f + (damagePercent / 100f);
-        Vector2 finalKnockback = knockbackDirection * baseKnockbackStrength * knockbackMultiplier;
+        float finalKnockbackStrength = (baseKnockbackStrength + (damagePercent / 20f)) * knockbackMultiplier;
 
-        // Apply knockback
+        Vector2 finalKnockback = knockbackDirection * finalKnockbackStrength;
         rb.linearVelocity = Vector2.zero;
         rb.AddForce(finalKnockback, ForceMode2D.Impulse);
 
-        // Apply hitstun
         isInHitstun = true;
         hitstunTimer = hitstunDuration;
 
-        // Play hurt animation
-        if (animator.enabled)
-            animator.SetTrigger("Hurt");
+        PlaySFX(hurtClip);
+    }
+
+    private bool HasAnimatorParameter(string paramName)
+    {
+        if (animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in animator.parameters)
+        {
+            if (param.name == paramName)
+                return true;
+        }
+        return false;
     }
 
     void HandleTimers()
@@ -319,9 +380,14 @@ public class Player : MonoBehaviour
             if (hitstunTimer <= 0)
                 isInHitstun = false;
         }
-    }
 
-    // ---------------- PLATFORM DROP ----------------
+        if (gunCooldownTimer > 0f)
+        {
+            gunCooldownTimer -= Time.deltaTime;
+            if (gunCooldownTimer < 0f)
+                gunCooldownTimer = 0f;
+        }
+    }
 
     void HandlePlatformDrop()
     {
@@ -344,7 +410,7 @@ public class Player : MonoBehaviour
         {
             if (col.CompareTag("OneWayPlatform"))
             {
-                Physics2D.IgnoreCollision(GetComponent<Collider2D>(), col, true);
+                Physics2D.IgnoreCollision(playerCollider, col, true);
                 currentPlatformCollider = col;
                 canPassThroughPlatform = true;
                 passThroughTimer = passThroughDuration;
@@ -358,13 +424,11 @@ public class Player : MonoBehaviour
     {
         if (currentPlatformCollider != null)
         {
-            Physics2D.IgnoreCollision(GetComponent<Collider2D>(), currentPlatformCollider, false);
+            Physics2D.IgnoreCollision(playerCollider, currentPlatformCollider, false);
             currentPlatformCollider = null;
         }
         canPassThroughPlatform = false;
     }
-
-    // ---------------- ANIMATION ----------------
 
     void SetAnimation(float moveInput)
     {
@@ -385,22 +449,19 @@ public class Player : MonoBehaviour
         }
     }
 
-    // ---------------- DAMAGE / DEATH ----------------
-
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionStay2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Damage"))
-        {
-            damagePercent -= 10; // FIXED: Use damagePercent instead of health
-            damagePercent = Mathf.Clamp(damagePercent, 0, maxDamagePercent);
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            StartCoroutine(FlashRed());
+        Player other = collision.gameObject.GetComponent<Player>();
 
-            // Update health bar
-            if (healthBar != null)
-            {
-                healthBar.SetHealth(damagePercent);
-            }
+        FlashRed();
+
+        if (other != null && other != this && isAttacking && !hitPlayersThisAttack.Contains(other))
+        {
+            hitPlayersThisAttack.Add(other);
+
+            Vector2 direction = (other.transform.position - transform.position).normalized;
+
+            other.TakeDamage(attackDamage, direction, baseKnockbackStrength);
         }
     }
 
@@ -418,14 +479,12 @@ public class Player : MonoBehaviour
 
         if (lives > 0)
         {
-            // Reset damage percentage when respawning
             damagePercent = 0f;
             if (healthBar != null)
             {
                 healthBar.SetHealth(damagePercent);
             }
 
-            // Respawn at checkpoint
             if (respawnPoint != null)
             {
                 transform.position = respawnPoint.position;
@@ -441,16 +500,17 @@ public class Player : MonoBehaviour
 
     void Lose()
     {
-        if (hasLost) return; // Only run once
+        if (hasLost) return;
         hasLost = true;
 
         FindAnyObjectByType<MusicController>()?.StopMusic();
         Time.timeScale = 0f;
-        WinUI.SetActive(true);
+
+        if (WinUI != null)
+            WinUI.SetActive(true);
+
         PlaySFX(winClip);
     }
-
-    // ---------------- AUDIO ----------------
 
     void PlaySFX(AudioClip clip)
     {
