@@ -26,6 +26,6 @@ public class StartButtonHandler : MonoBehaviour
 
         if (!GameManager.instance.BothPlayersSelected()) return;
 
-        SceneManager.LoadScene("Map_Scene");
+        SceneManager.LoadScene("GameScene");
     }
 }

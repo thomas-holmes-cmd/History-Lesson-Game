@@ -757,9 +757,17 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
+      propertyPath: attackSprite
+      value: 
+      objectReference: {fileID: 6842004786047142388, guid: e524b04fba60cd54f92acf70bb08f946, type: 3}
+    - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
       propertyPath: respawnPoint
       value: 
       objectReference: {fileID: 970328215}
+    - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
+      propertyPath: attackSprite2
+      value: 
+      objectReference: {fileID: -1993330656895390235, guid: 4f07f8073a1692847b64baf34cde80d7, type: 3}
     - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
       propertyPath: wallSlideSpeed
       value: 15
@@ -5675,9 +5683,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8300000, guid: 48408fc0ca5b5fb4d881b61112316a0a, type: 3}
     - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
+      propertyPath: attackSprite
+      value: 
+      objectReference: {fileID: 6842004786047142388, guid: e524b04fba60cd54f92acf70bb08f946, type: 3}
+    - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
       propertyPath: respawnPoint
       value: 
       objectReference: {fileID: 970328215}
+    - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
+      propertyPath: attackSprite2
+      value: 
+      objectReference: {fileID: -1993330656895390235, guid: 4f07f8073a1692847b64baf34cde80d7, type: 3}
     - target: {fileID: 2144601169990547135, guid: 75d7bf14caa39e24084ed5f57dd7b710, type: 3}
       propertyPath: wallSlideSpeed
       value: 15

@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class CharacterSelectionUI : MonoBehaviour
 {
@@ -42,7 +43,7 @@ public class CharacterSelectionUI : MonoBehaviour
             Image icon = obj.transform.Find("Icon").GetComponent<Image>();
             if (icon != null) icon.sprite = c.icon;
 
-           
+
             Transform iconTransform = obj.transform.Find("Icon");
             Outline outline = iconTransform.GetComponent<Outline>();
             if (outline != null)
@@ -55,46 +56,38 @@ public class CharacterSelectionUI : MonoBehaviour
         }
     }
 
-   
+
     private void HandleClick(Character character, Transform option)
     {
 
-        
+        // Check if clicking on already selected P1 option
         if (p1 == option)
         {
             ClearP1();
             return;
         }
 
-        
+        // Check if clicking on already selected P2 option
         if (p2 == option)
         {
             ClearP2();
             return;
         }
 
-       
         if (p1 == null)
         {
             SetP1(character, option);
             return;
         }
 
-        
         if (p2 == null)
         {
             SetP2(character, option);
             return;
         }
-
-        
-        if (p2 != option)
-        {
-            SetP1(character, option);
-        }
     }
 
-    
+
     void SetP1(Character c, Transform option)
     {
 
@@ -119,7 +112,7 @@ public class CharacterSelectionUI : MonoBehaviour
         UpdateStart();
     }
 
-   
+
     void SetP2(Character c, Transform option)
     {
 
@@ -144,7 +137,7 @@ public class CharacterSelectionUI : MonoBehaviour
         UpdateStart();
     }
 
-   
+
     void SetOutline(Transform option, Color color)
     {
 
@@ -170,7 +163,7 @@ public class CharacterSelectionUI : MonoBehaviour
             o.enabled = state;
     }
 
-  
+
     private void Update()
     {
 
@@ -198,8 +191,9 @@ public class CharacterSelectionUI : MonoBehaviour
     void UpdateStart()
     {
 
-        startButtonHandler.SetInteractable(
-            GameManager.instance.BothPlayersSelected()
-        );
+        bool bothSelected = GameManager.instance.BothPlayersSelected();
+        startButtonHandler.SetInteractable(bothSelected);
+
+        
     }
 }
